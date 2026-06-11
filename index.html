@@ -8,6 +8,7 @@
   /* ============================================================
      ⚙️  EDIT EVERYTHING IN THE <script> CONFIG BLOCK NEAR THE
          BOTTOM OF THIS FILE — password, house name, address, photos.
+         Translations live in the I18N block just below CONFIG.
      ============================================================ */
   :root {
     --sea:      #2a7f9e;
@@ -63,6 +64,7 @@
   }
   #gate button:active { transform: translateY(1px); }
   #gateErr { color: var(--warn); font-size: 13px; height: 18px; margin-top: 8px; }
+  #gate .lang-sel { margin-top: 18px; }
 
   /* ---------- Hero ---------- */
   header.hero { background: var(--cream); border-bottom: 1px solid var(--line); }
@@ -71,11 +73,16 @@
   .hero h1 { font-size: 26px; }
   .hero .addr { color: var(--muted); font-size: 14px; margin-top: 4px; }
   .hero .addr a { color: var(--sea-dark); text-decoration: none; }
+  .hero-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
   .ghost-btn {
     flex-shrink: 0; padding: 9px 13px; font-size: 14px; font-weight: 600; color: var(--sea-dark);
     background: #fff; border: 1.5px solid var(--sea); border-radius: 11px; white-space: nowrap;
   }
   .ghost-btn:active { transform: translateY(1px); }
+  .lang-sel {
+    padding: 9px 8px; font-size: 14px; font-weight: 700; color: var(--sea-dark);
+    background: #fff; border: 1.5px solid var(--sea); border-radius: 11px; cursor: pointer;
+  }
 
   .banner { max-width: 860px; margin: 16px auto 0; padding: 0 18px 18px; }
   .banner img {
@@ -105,7 +112,6 @@
   .row .field { flex: 1; min-width: 0; }
   .pick-hint { color: var(--sea-dark); font-size: 13px; background: #e9f1f4; border: 1px solid #cfe2e9;
     border-radius: 10px; padding: 9px 12px; margin: 0 0 14px; }
-  /* On phones the two date pickers don't fit side by side — stack them. */
   @media (max-width: 480px) {
     .row.dates { flex-direction: column; gap: 0; }
     .row.dates .field { margin-bottom: 14px; }
@@ -129,7 +135,7 @@
   .notice.warn { display: block; background: #fbe9e1; color: var(--warn); border: 1px solid #f3c7b4; }
   .notice.ok   { display: block; background: #e4f3ea; color: var(--ok);   border: 1px solid #bfe3cd; }
 
-  /* ---------- Modal (members) ---------- */
+  /* ---------- Modal (settings) ---------- */
   .modal-back {
     position: fixed; inset: 0; z-index: 45; background: rgba(30,25,20,.5);
     display: none; align-items: flex-start; justify-content: center; padding: 24px 16px; overflow: auto;
@@ -173,8 +179,9 @@
 
   #calArea.month { }
   #calArea.multi, #calArea.year { display: grid; gap: 22px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
-  .month-label { font-weight: 700; font-size: 14px; margin: 2px 0 8px; }
+  .month-label { font-weight: 700; font-size: 14px; margin: 2px 0 8px; text-transform: capitalize; }
   #calArea.multi .month-label, #calArea.year .month-label { cursor: pointer; color: var(--sea-dark); }
+  .cal-head h2 { text-transform: capitalize; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
   .dow { text-align: center; font-size: 13px; font-weight: 700; color: var(--muted); padding: 4px 0; text-transform: uppercase; }
   #calArea.year .dow { font-size: 10px; }
@@ -188,15 +195,10 @@
   #calArea.multi .day .num { font-size: 13px; }
   #calArea.year .day .num { font-size: 11px; }
   .day.empty { background: transparent; border: none; }
-  .day .nm { font-size: 12px; line-height: 1.2; margin-top: auto; color: #fff;
-             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
   .day.today { outline: 2px solid var(--terra); }
   .day.past { opacity: .32; }
   .day.pickable { cursor: pointer; transition: transform .08s; }
   .day.pickable:hover { border-color: var(--sea); }
-  .day.filled { color: #fff; border-color: transparent; }
-  .day.filled .num, .day.filled .nm { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
-  .day.m-arr .num { color: var(--ink); text-shadow: 0 1px 1px rgba(255,255,255,.85); }
   .day.sel, .day.sel-start, .day.sel-end { background: var(--sea) !important; border-color: var(--sea-dark) !important; color: #fff; }
   .day.sel .num, .day.sel-start .num, .day.sel-end .num { color: #fff; }
 
@@ -207,7 +209,7 @@
     overflow: hidden; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,.55); }
   .band-nb { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.55) 0 5px, transparent 5px 10px); }
   .day.booked .num { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
-  .day .num, .day .nm, .day .flame { position: relative; z-index: 1; }
+  .day .num, .day .flame { position: relative; z-index: 1; }
   .day.crowded { outline: 2px solid #c8552f; }
   .day .flame { position: absolute; top: 2px; right: 3px; font-size: 11px; }
 
@@ -245,48 +247,53 @@
     <div class="card">
       <div class="emoji">🏖️</div>
       <h2 id="gateTitle">Summer House</h2>
-      <p>Enter the family password</p>
-      <input id="gateInput" type="password" inputmode="text" autocomplete="off" placeholder="Password" />
-      <button id="gateBtn">Enter</button>
+      <p data-i18n="gate_sub">Enter the family password</p>
+      <input id="gateInput" type="password" inputmode="text" autocomplete="off" data-i18n-ph="gate_ph" placeholder="Password" />
+      <button id="gateBtn" data-i18n="gate_btn">Enter</button>
       <div id="gateErr"></div>
+      <select id="gateLang" class="lang-sel" aria-label="Language">
+        <option value="en">🌐 EN</option>
+        <option value="es">🌐 ES</option>
+        <option value="de">🌐 DE</option>
+      </select>
     </div>
   </div>
 
-  <!-- ============ MEMBERS MODAL ============ -->
+  <!-- ============ SETTINGS MODAL ============ -->
   <div class="modal-back" id="membersModal">
     <div class="modal">
       <div class="modal-head">
-        <h2>Settings</h2>
+        <h2 data-i18n="settings_title">Settings</h2>
         <button class="x" id="closeMembers" aria-label="Close">×</button>
       </div>
 
-      <h3 class="modal-sub-h">Family members</h3>
-      <p class="section-sub">Add or remove who can book.</p>
+      <h3 class="modal-sub-h" data-i18n="members_h">Family members</h3>
+      <p class="section-sub" data-i18n="members_sub">Add or remove who can book.</p>
       <ul class="mlist" id="mlist"></ul>
       <div class="row" id="memberForm">
         <div class="field" style="flex:2">
-          <label for="mName">Name</label>
-          <input type="text" id="mName" placeholder="e.g. Chrissie" maxlength="24" />
+          <label for="mName" data-i18n="name_l">Name</label>
+          <input type="text" id="mName" data-i18n-ph="name_ph" placeholder="e.g. Chrissie" maxlength="24" />
         </div>
         <div class="field" style="flex:0 0 64px">
-          <label for="mColor">Colour</label>
+          <label for="mColor" data-i18n="colour_l">Colour</label>
           <input type="color" id="mColor" />
         </div>
       </div>
-      <button class="member-btn" id="addMemberBtn">+ Add member</button>
+      <button class="member-btn" id="addMemberBtn" data-i18n="add_member">+ Add member</button>
 
       <hr class="modal-sep" />
-      <h3 class="modal-sub-h">Family password</h3>
-      <p class="section-sub">Enter the current password to set a new one.</p>
+      <h3 class="modal-sub-h" data-i18n="pwd_h">Family password</h3>
+      <p class="section-sub" data-i18n="pwd_sub">Enter the current password to set a new one.</p>
       <div class="field">
-        <label for="oldPwd">Current password</label>
+        <label for="oldPwd" data-i18n="pwd_old">Current password</label>
         <input type="password" id="oldPwd" autocomplete="off" />
       </div>
       <div class="field">
-        <label for="newPwd">New password</label>
+        <label for="newPwd" data-i18n="pwd_new">New password</label>
         <input type="password" id="newPwd" autocomplete="off" />
       </div>
-      <button class="member-btn" id="changePwdBtn">Change password</button>
+      <button class="member-btn" id="changePwdBtn" data-i18n="pwd_btn">Change password</button>
       <div id="pwdMsg" class="notice" style="margin-top:12px"></div>
     </div>
   </div>
@@ -298,7 +305,14 @@
         <h1 id="houseName"></h1>
         <div class="addr">📍 <a id="mapLink" target="_blank" rel="noopener"><span id="addr"></span></a></div>
       </div>
-      <button class="ghost-btn" id="openMembers">⚙️ Settings</button>
+      <div class="hero-actions">
+        <select id="langSel" class="lang-sel" aria-label="Language">
+          <option value="en">🌐 EN</option>
+          <option value="es">🌐 ES</option>
+          <option value="de">🌐 DE</option>
+        </select>
+        <button class="ghost-btn" id="openMembers" data-i18n="settings">⚙️ Settings</button>
+      </div>
     </div>
     <div id="photoArea"></div>
   </header>
@@ -310,35 +324,35 @@
       <h2 id="bookHeading">Book your dates</h2>
       <div class="who-row">
         <div class="field">
-          <label for="who">Who's booking?</label>
+          <label for="who" data-i18n="who_l">Who's booking?</label>
           <select id="who"></select>
         </div>
-        <button class="link-btn" id="manageLink">Manage</button>
+        <button class="link-btn" id="manageLink" data-i18n="manage">Manage</button>
       </div>
       <div class="row dates">
         <div class="field">
-          <label for="start">Arrival</label>
+          <label for="start" data-i18n="arrival">Arrival</label>
           <input type="date" id="start" />
         </div>
         <div class="field">
-          <label for="end">Departure</label>
+          <label for="end" data-i18n="departure">Departure</label>
           <input type="date" id="end" />
         </div>
       </div>
-      <p class="pick-hint">📅 Or just tap the days on the calendar below — it fills these dates for you.</p>
+      <p class="pick-hint" data-i18n="pick_hint">📅 Or just tap the days on the calendar below — it fills these dates for you.</p>
       <div class="row">
         <div class="field" style="max-width:150px">
-          <label for="people">How many people?</label>
+          <label for="people" data-i18n="people_l">How many people?</label>
           <input type="number" id="people" min="1" max="40" value="2" />
         </div>
       </div>
-      <label class="check"><input type="checkbox" id="neighbour" /> 🏠 Neighbour house <span class="check-sub">— shows on the calendar but doesn't count toward capacity</span></label>
+      <label class="check"><input type="checkbox" id="neighbour" /> <span><span data-i18n="neighbour_l">🏠 Neighbour house</span> <span class="check-sub" data-i18n="neighbour_sub">— shows on the calendar but doesn't count toward capacity</span></span></label>
       <div class="field">
-        <label for="note">Note (optional)</label>
-        <textarea id="note" placeholder="e.g. bringing the dog, arriving late…"></textarea>
+        <label for="note" data-i18n="note_l">Note (optional)</label>
+        <textarea id="note" data-i18n-ph="note_ph" placeholder="e.g. bringing the dog, arriving late…"></textarea>
       </div>
       <button class="book-btn" id="bookBtn">Book these dates</button>
-      <button class="link-btn cancel-edit" id="cancelEdit" style="display:none">Cancel edit</button>
+      <button class="link-btn cancel-edit" id="cancelEdit" data-i18n="cancel_edit" style="display:none">Cancel edit</button>
       <div id="notice" class="notice"></div>
     </section>
 
@@ -352,18 +366,18 @@
         </div>
       </div>
       <div class="view-switch" id="viewSwitch">
-        <button data-mode="month" class="on">Month</button>
-        <button data-mode="3">3 months</button>
-        <button data-mode="6">6 months</button>
-        <button data-mode="year">Year</button>
+        <button data-mode="month" class="on" data-i18n="v_month">Month</button>
+        <button data-mode="3" data-i18n="v_3">3 months</button>
+        <button data-mode="6" data-i18n="v_6">6 months</button>
+        <button data-mode="year" data-i18n="v_year">Year</button>
       </div>
-      <p class="section-sub" id="calHint">Tip: tap an arrival day, then tap a departure day — it fills the dates for you.</p>
+      <p class="section-sub" id="calHint" data-i18n="cal_hint">Tip: tap an arrival day, then tap a departure day — it fills the dates for you.</p>
       <div id="calArea" class="month"></div>
     </section>
 
     <!-- ============ UPCOMING ============ -->
     <section class="card">
-      <h2>Upcoming stays</h2>
+      <h2 data-i18n="upcoming_h">Upcoming stays</h2>
       <ul class="blist" id="blist"></ul>
     </section>
 
@@ -380,22 +394,136 @@ const CONFIG = {
   houseName: "Summer House",
   address: "C. Río Guadiana, 99, 03191 Pilar de la Horadada, Alicante, Spain",
 
-  // How many people the house sleeps, and when to start warning "almost full".
   capacity: 8,
   warnAt: 6,
 
-  // OPTIONAL starter members (first load only). Family add the rest themselves.
   members: [],
-
-  // Auto-suggested colours for new members:
   palette: ["#d98452","#2a7f9e","#7a5ea8","#4b9b6e","#c2517e","#c79a2e","#5a8fb0","#a0563d"],
+  photos: ["photos/house.jpg", "photos/Garden.jpg", "photos/window.jpg"]
+};
 
-  // First photo = page + gate background. All photos show in the banner/strip.
-  photos: [
-    "photos/house.jpg",
-    "photos/Garden.jpg",
-    "photos/window.jpg"
-  ]
+/* ================================================================
+   🌐  TRANSLATIONS — edit any text here. {x} are filled in by code.
+   ================================================================ */
+const T = {
+  en: {
+    gate_sub: "Enter the family password", gate_ph: "Password", gate_btn: "Enter", wrong_pwd: "Wrong password",
+    settings: "⚙️ Settings", settings_title: "Settings",
+    members_h: "Family members", members_sub: "Add or remove who can book.",
+    name_l: "Name", name_ph: "e.g. Chrissie", colour_l: "Colour", add_member: "+ Add member",
+    remove_member: "Remove member", remove_confirm: "Remove “{who}”?",
+    remove_confirm_b: "“{who}” has bookings. Removing them keeps the bookings but loses their colour. Continue?",
+    dup_member: "There's already a member with that name.", add_first_opt: "— Add a member first —",
+    pwd_h: "Family password", pwd_sub: "Enter the current password to set a new one.",
+    pwd_old: "Current password", pwd_new: "New password", pwd_btn: "Change password",
+    pwd_wrong: "Current password is wrong.", pwd_short: "New password is too short (min 3 characters).",
+    pwd_same: "That's already the current password.", pwd_changed: "✓ Password changed on this device.",
+    book_h: "Book your dates", who_l: "Who's booking?", manage: "Manage",
+    arrival: "Arrival", departure: "Departure",
+    pick_hint: "📅 Or just tap the days on the calendar below — it fills these dates for you.",
+    people_l: "How many people?", neighbour_l: "🏠 Neighbour house",
+    neighbour_sub: "— shows on the calendar but doesn't count toward capacity",
+    note_l: "Note (optional)", note_ph: "e.g. bringing the dog, arriving late…",
+    book_btn: "Book these dates", save_changes: "Save changes", cancel_edit: "Cancel edit",
+    editing: "Editing {who}'s stay",
+    need_member: "Add a family member first.", need_dates: "Pick an arrival and a departure date.",
+    dep_after: "Departure must be after arrival.",
+    saved: "✓ Booking saved for {who}.", changes_saved: "✓ Changes saved for {who}.",
+    cap_over: "😅 Whoa — up to {p} people, over the {cap} beds! Time to rent the neighbour house 🏠",
+    cap_almost: "🛟 Cozy! Up to {p}/{cap} beds on the busiest night — the house is almost full.",
+    cap_ok: "✓ {nightsPhrase} · up to {p} in the house. Plenty of room 🌞",
+    neighbour_msg: "🏠 Neighbour-house stay — {nightsPhrase}. Shown on the calendar, not counted toward the {cap} beds.",
+    night: "night", nights: "nights", person: "person", people: "people",
+    upcoming_h: "Upcoming stays", empty_list: "No bookings yet. Be the first! 🌞",
+    neighbour_tag: "🏠 neighbour", neighbour_word: "neighbour", in_house: "in the house",
+    edit_title: "Edit booking", del_title: "Delete booking", del_confirm: "Delete {who}'s booking ({range})?",
+    v_month: "Month", v_3: "3 months", v_6: "6 months", v_year: "Year",
+    cal_hint: "Tip: tap an arrival day, then tap a departure day — it fills the dates for you.",
+    footnote: "Bookings are saved on this device (demo version). When you're ready for the whole family to share one calendar, we connect it online.",
+    photo_ph: "Add a photo at photos/house.jpg"
+  },
+  es: {
+    gate_sub: "Introduce la contraseña familiar", gate_ph: "Contraseña", gate_btn: "Entrar", wrong_pwd: "Contraseña incorrecta",
+    settings: "⚙️ Ajustes", settings_title: "Ajustes",
+    members_h: "Miembros de la familia", members_sub: "Añade o quita quién puede reservar.",
+    name_l: "Nombre", name_ph: "ej. Chrissie", colour_l: "Color", add_member: "+ Añadir miembro",
+    remove_member: "Quitar miembro", remove_confirm: "¿Quitar a «{who}»?",
+    remove_confirm_b: "«{who}» tiene reservas. Si lo quitas, las reservas se mantienen pero pierden su color. ¿Continuar?",
+    dup_member: "Ya hay un miembro con ese nombre.", add_first_opt: "— Añade un miembro primero —",
+    pwd_h: "Contraseña familiar", pwd_sub: "Introduce la contraseña actual para poner una nueva.",
+    pwd_old: "Contraseña actual", pwd_new: "Nueva contraseña", pwd_btn: "Cambiar contraseña",
+    pwd_wrong: "La contraseña actual es incorrecta.", pwd_short: "La nueva contraseña es muy corta (mín. 3 caracteres).",
+    pwd_same: "Esa ya es la contraseña actual.", pwd_changed: "✓ Contraseña cambiada en este dispositivo.",
+    book_h: "Reserva tus fechas", who_l: "¿Quién reserva?", manage: "Gestionar",
+    arrival: "Llegada", departure: "Salida",
+    pick_hint: "📅 O toca los días en el calendario de abajo — rellena las fechas por ti.",
+    people_l: "¿Cuántas personas?", neighbour_l: "🏠 Casa vecina",
+    neighbour_sub: "— aparece en el calendario pero no cuenta para la capacidad",
+    note_l: "Nota (opcional)", note_ph: "ej. traemos el perro, llegamos tarde…",
+    book_btn: "Reservar estas fechas", save_changes: "Guardar cambios", cancel_edit: "Cancelar edición",
+    editing: "Editando la estancia de {who}",
+    need_member: "Añade primero un miembro de la familia.", need_dates: "Elige una fecha de llegada y de salida.",
+    dep_after: "La salida debe ser posterior a la llegada.",
+    saved: "✓ Reserva guardada para {who}.", changes_saved: "✓ Cambios guardados para {who}.",
+    cap_over: "😅 ¡Uf! Hasta {p} personas, ¡más de las {cap} camas! Toca alquilar la casa vecina 🏠",
+    cap_almost: "🛟 ¡Apretaditos! Hasta {p}/{cap} camas la noche más llena — la casa está casi llena.",
+    cap_ok: "✓ {nightsPhrase} · hasta {p} en la casa. Espacio de sobra 🌞",
+    neighbour_msg: "🏠 Estancia en la casa vecina — {nightsPhrase}. Aparece en el calendario, no cuenta para las {cap} camas.",
+    night: "noche", nights: "noches", person: "persona", people: "personas",
+    upcoming_h: "Próximas estancias", empty_list: "Aún no hay reservas. ¡Sé el primero! 🌞",
+    neighbour_tag: "🏠 vecina", neighbour_word: "vecina", in_house: "en la casa",
+    edit_title: "Editar reserva", del_title: "Eliminar reserva", del_confirm: "¿Eliminar la reserva de {who} ({range})?",
+    v_month: "Mes", v_3: "3 meses", v_6: "6 meses", v_year: "Año",
+    cal_hint: "Consejo: toca un día de llegada y luego uno de salida — rellena las fechas por ti.",
+    footnote: "Las reservas se guardan en este dispositivo (versión demo). Cuando quieras que toda la familia comparta un único calendario, lo conectamos online.",
+    photo_ph: "Añade una foto en photos/house.jpg"
+  },
+  de: {
+    gate_sub: "Familien-Passwort eingeben", gate_ph: "Passwort", gate_btn: "Öffnen", wrong_pwd: "Falsches Passwort",
+    settings: "⚙️ Einstellungen", settings_title: "Einstellungen",
+    members_h: "Familienmitglieder", members_sub: "Hinzufügen oder entfernen, wer buchen darf.",
+    name_l: "Name", name_ph: "z.B. Chrissie", colour_l: "Farbe", add_member: "+ Mitglied hinzufügen",
+    remove_member: "Mitglied entfernen", remove_confirm: "„{who}“ entfernen?",
+    remove_confirm_b: "„{who}“ hat Buchungen. Beim Entfernen bleiben die Buchungen, verlieren aber ihre Farbe. Fortfahren?",
+    dup_member: "Es gibt bereits ein Mitglied mit diesem Namen.", add_first_opt: "— Zuerst ein Mitglied hinzufügen —",
+    pwd_h: "Familien-Passwort", pwd_sub: "Aktuelles Passwort eingeben, um ein neues zu setzen.",
+    pwd_old: "Aktuelles Passwort", pwd_new: "Neues Passwort", pwd_btn: "Passwort ändern",
+    pwd_wrong: "Aktuelles Passwort ist falsch.", pwd_short: "Neues Passwort ist zu kurz (mind. 3 Zeichen).",
+    pwd_same: "Das ist bereits das aktuelle Passwort.", pwd_changed: "✓ Passwort auf diesem Gerät geändert.",
+    book_h: "Termine buchen", who_l: "Wer bucht?", manage: "Verwalten",
+    arrival: "Anreise", departure: "Abreise",
+    pick_hint: "📅 Oder tippe die Tage im Kalender unten an — die Termine werden automatisch ausgefüllt.",
+    people_l: "Wie viele Personen?", neighbour_l: "🏠 Nachbarhaus",
+    neighbour_sub: "— erscheint im Kalender, zählt aber nicht zur Belegung",
+    note_l: "Notiz (optional)", note_ph: "z.B. Hund dabei, späte Anreise…",
+    book_btn: "Diese Termine buchen", save_changes: "Änderungen speichern", cancel_edit: "Bearbeitung abbrechen",
+    editing: "Aufenthalt von {who} bearbeiten",
+    need_member: "Zuerst ein Familienmitglied hinzufügen.", need_dates: "Anreise- und Abreisedatum wählen.",
+    dep_after: "Abreise muss nach der Anreise liegen.",
+    saved: "✓ Buchung für {who} gespeichert.", changes_saved: "✓ Änderungen für {who} gespeichert.",
+    cap_over: "😅 Ups — bis zu {p} Personen, mehr als {cap} Betten! Zeit, das Nachbarhaus zu mieten 🏠",
+    cap_almost: "🛟 Kuschelig! Bis zu {p}/{cap} Betten in der vollsten Nacht — das Haus ist fast voll.",
+    cap_ok: "✓ {nightsPhrase} · bis zu {p} im Haus. Genug Platz 🌞",
+    neighbour_msg: "🏠 Aufenthalt im Nachbarhaus — {nightsPhrase}. Im Kalender sichtbar, zählt nicht zu den {cap} Betten.",
+    night: "Nacht", nights: "Nächte", person: "Person", people: "Personen",
+    upcoming_h: "Kommende Aufenthalte", empty_list: "Noch keine Buchungen. Sei der Erste! 🌞",
+    neighbour_tag: "🏠 Nachbar", neighbour_word: "Nachbar", in_house: "im Haus",
+    edit_title: "Buchung bearbeiten", del_title: "Buchung löschen", del_confirm: "Buchung von {who} löschen ({range})?",
+    v_month: "Monat", v_3: "3 Monate", v_6: "6 Monate", v_year: "Jahr",
+    cal_hint: "Tipp: Tippe einen Anreisetag an, dann einen Abreisetag — die Termine werden ausgefüllt.",
+    footnote: "Buchungen werden auf diesem Gerät gespeichert (Demo-Version). Wenn die ganze Familie einen gemeinsamen Kalender teilen soll, verbinden wir ihn online.",
+    photo_ph: "Foto unter photos/house.jpg hinzufügen"
+  }
+};
+const MONTHS_I18N = {
+  en: ["January","February","March","April","May","June","July","August","September","October","November","December"],
+  es: ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"],
+  de: ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"]
+};
+const DOW_I18N = {
+  en: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+  es: ["lun","mar","mié","jue","vie","sáb","dom"],
+  de: ["Mo","Di","Mi","Do","Fr","Sa","So"]
 };
 /* ================================================================ */
 
@@ -403,17 +531,32 @@ const STORE_KEY = "summerHouse.bookings.v1";
 const MEMBERS_KEY = "summerHouse.members.v1";
 const ME_KEY = "summerHouse.me.v1";
 const PWD_KEY = "summerHouse.pwd.v1";
-function effectivePassword() { return localStorage.getItem(PWD_KEY) || CONFIG.password; }
-const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DOW = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const LANG_KEY = "summerHouse.lang.v1";
 const VIEW_COUNT = { month: 1, "3": 3, "6": 6, year: 12 };
+
+function effectivePassword() { return localStorage.getItem(PWD_KEY) || CONFIG.password; }
+function detectLang() {
+  const stored = localStorage.getItem(LANG_KEY);
+  if (stored && ["en","es","de"].includes(stored)) return stored;
+  const n = (navigator.language || "").slice(0,2).toLowerCase();
+  return ["en","es","de"].includes(n) ? n : "es";
+}
+let lang = detectLang();
+let MONTHS = MONTHS_I18N[lang];
+let DOW = DOW_I18N[lang];
+function t(key, vars) {
+  let s = (T[lang] && T[lang][key] !== undefined) ? T[lang][key] : (T.en[key] !== undefined ? T.en[key] : key);
+  if (vars) for (const k in vars) s = s.split("{" + k + "}").join(vars[k]);
+  return s;
+}
+function unit(n, sKey, pKey) { return n + " " + t(n === 1 ? sKey : pKey); }
 
 let bookings = load();
 let members = loadMembers();
 let view = startOfMonth(new Date());
 let viewMode = "month";
 let pick = { start: null, end: null };
-let editingId = null; // when set, the form edits this booking instead of creating one
+let editingId = null;
 
 /* ---------- storage ---------- */
 function load() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch { return []; } }
@@ -444,17 +587,11 @@ function rangeFmt(a, b) {
 }
 function nights(s, e) { return Math.round((parse(e) - parse(s)) / 86400000); }
 function colorOf(name) { const m = members.find(x => x.name === name); return m ? m.color : "#8a8178"; }
-function overlaps(s1, e1, s2, e2) { return s1 < e2 && e1 > s2; }
 function ppl(b) { return Math.max(1, parseInt(b.people, 10) || 1); }
-
-// Bookings sleeping in the MAIN house on a given night (neighbour stays excluded).
 function bookingsOn(dateStr) { return bookings.filter(b => dateStr >= b.start && dateStr < b.end); }
 function occupancyOn(dateStr, excludeId) {
-  return bookingsOn(dateStr)
-    .filter(b => !b.neighbour && b.id !== excludeId)
-    .reduce((sum, b) => sum + ppl(b), 0);
+  return bookingsOn(dateStr).filter(b => !b.neighbour && b.id !== excludeId).reduce((sum, b) => sum + ppl(b), 0);
 }
-// Peak main-house occupancy over the nights of [s, e), optionally adding a prospective booking.
 function peakOccupancy(s, e, addPeople, excludeId) {
   let peak = 0;
   for (let d = parse(s); ymd(d) < e; d.setDate(d.getDate() + 1)) {
@@ -472,9 +609,9 @@ function tryEnter() {
   if (gateInput.value === effectivePassword()) {
     gate.style.display = "none";
     sessionStorage.setItem("summerHouse.ok", "1");
-    if (!members.length) openModal(); // nudge first-time setup
+    if (!members.length) openModal();
   } else {
-    gateErr.textContent = "Wrong password";
+    gateErr.textContent = t("wrong_pwd");
     gateInput.value = ""; gateInput.focus();
   }
 }
@@ -482,10 +619,8 @@ document.getElementById("gateBtn").addEventListener("click", tryEnter);
 gateInput.addEventListener("keydown", e => { if (e.key === "Enter") tryEnter(); });
 if (sessionStorage.getItem("summerHouse.ok") === "1") gate.style.display = "none";
 document.getElementById("gateTitle").textContent = CONFIG.houseName;
-// Photo as the gate background (with a teal veil so the card stays readable):
 if (CONFIG.photos.length) {
-  gate.style.backgroundImage =
-    "linear-gradient(rgba(20,60,75,.55), rgba(20,60,75,.72)), url('" + CONFIG.photos[0] + "')";
+  gate.style.backgroundImage = "linear-gradient(rgba(20,60,75,.55), rgba(20,60,75,.72)), url('" + CONFIG.photos[0] + "')";
 }
 
 /* ---------- hero + page background ---------- */
@@ -493,12 +628,12 @@ document.getElementById("houseName").textContent = CONFIG.houseName;
 document.getElementById("addr").textContent = CONFIG.address;
 document.getElementById("mapLink").href = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(CONFIG.address);
 if (CONFIG.photos.length) {
-  document.body.style.background =
-    "linear-gradient(rgba(244,236,224,.88), rgba(244,236,224,.94)), url('" + CONFIG.photos[0] + "') center top / cover fixed no-repeat";
+  document.body.style.background = "linear-gradient(rgba(244,236,224,.88), rgba(244,236,224,.94)), url('" + CONFIG.photos[0] + "') center top / cover fixed no-repeat";
 }
-(function renderPhotos() {
+function renderPhotos() {
   const area = document.getElementById("photoArea");
-  if (CONFIG.photos.length === 0) { area.className = "banner"; area.innerHTML = '<div class="ph">🖼️<span>Add a photo at photos/house.jpg</span></div>'; return; }
+  area.innerHTML = "";
+  if (CONFIG.photos.length === 0) { area.className = "banner"; area.innerHTML = '<div class="ph">🖼️<span>' + t("photo_ph") + '</span></div>'; return; }
   if (CONFIG.photos.length === 1) {
     area.className = "banner";
     const img = document.createElement("img"); img.src = CONFIG.photos[0]; img.alt = CONFIG.houseName; img.loading = "lazy";
@@ -506,9 +641,9 @@ if (CONFIG.photos.length) {
   }
   area.className = "gallery";
   CONFIG.photos.forEach(src => { const img = document.createElement("img"); img.src = src; img.alt = CONFIG.houseName; img.loading = "lazy"; area.appendChild(img); });
-})();
+}
 
-/* ---------- members modal ---------- */
+/* ---------- settings modal ---------- */
 const modal = document.getElementById("membersModal");
 const whoSel = document.getElementById("who");
 const mNameEl = document.getElementById("mName");
@@ -526,12 +661,12 @@ const newPwdEl = document.getElementById("newPwd");
 const pwdMsg = document.getElementById("pwdMsg");
 document.getElementById("changePwdBtn").addEventListener("click", () => {
   const oldP = oldPwdEl.value, newP = newPwdEl.value.trim();
-  if (oldP !== effectivePassword()) { pwdMsg.className = "notice warn"; pwdMsg.textContent = "Current password is wrong."; return; }
-  if (newP.length < 3) { pwdMsg.className = "notice warn"; pwdMsg.textContent = "New password is too short (min 3 characters)."; return; }
-  if (newP === oldP) { pwdMsg.className = "notice warn"; pwdMsg.textContent = "That's already the current password."; return; }
+  if (oldP !== effectivePassword()) { pwdMsg.className = "notice warn"; pwdMsg.textContent = t("pwd_wrong"); return; }
+  if (newP.length < 3) { pwdMsg.className = "notice warn"; pwdMsg.textContent = t("pwd_short"); return; }
+  if (newP === oldP) { pwdMsg.className = "notice warn"; pwdMsg.textContent = t("pwd_same"); return; }
   localStorage.setItem(PWD_KEY, newP);
   oldPwdEl.value = ""; newPwdEl.value = "";
-  pwdMsg.className = "notice ok"; pwdMsg.textContent = "✓ Password changed on this device.";
+  pwdMsg.className = "notice ok"; pwdMsg.textContent = t("pwd_changed");
 });
 
 function renderMembers() {
@@ -541,10 +676,10 @@ function renderMembers() {
     const li = document.createElement("li");
     const dot = document.createElement("div"); dot.className = "dot"; dot.style.background = m.color;
     const who = document.createElement("div"); who.className = "who"; who.textContent = m.name;
-    const del = document.createElement("button"); del.className = "del"; del.innerHTML = "🗑"; del.title = "Remove member";
+    const del = document.createElement("button"); del.className = "del"; del.innerHTML = "🗑"; del.title = t("remove_member");
     del.addEventListener("click", () => {
       const has = bookings.some(b => b.who === m.name);
-      const msg = has ? "“" + m.name + "” has bookings. Removing them keeps the bookings but loses their colour. Continue?" : "Remove “" + m.name + "”?";
+      const msg = has ? t("remove_confirm_b", { who: m.name }) : t("remove_confirm", { who: m.name });
       if (confirm(msg)) { members = members.filter(x => x.name !== m.name); saveMembers(); refreshMembersUI(); }
     });
     li.appendChild(dot); li.appendChild(who); li.appendChild(del);
@@ -554,7 +689,7 @@ function renderMembers() {
   const prev = whoSel.value;
   whoSel.innerHTML = "";
   if (!members.length) {
-    const o = document.createElement("option"); o.value = ""; o.textContent = "— Add a member first —"; o.disabled = true; o.selected = true;
+    const o = document.createElement("option"); o.value = ""; o.textContent = t("add_first_opt"); o.disabled = true; o.selected = true;
     whoSel.appendChild(o);
   } else {
     members.forEach(m => { const o = document.createElement("option"); o.value = m.name; o.textContent = m.name; whoSel.appendChild(o); });
@@ -562,8 +697,8 @@ function renderMembers() {
     const me = getMe();
     whoSel.value = (has(prev) && prev) || (has(me) && me) || members[0].name;
   }
-  document.getElementById("bookBtn").disabled = !members.length;
-  document.getElementById("bookBtn").style.opacity = members.length ? "1" : ".5";
+  bookBtn.disabled = !members.length;
+  bookBtn.style.opacity = members.length ? "1" : ".5";
   mColorEl.value = nextColor();
 }
 function refreshMembersUI() { renderMembers(); renderAll(); }
@@ -571,7 +706,7 @@ function refreshMembersUI() { renderMembers(); renderAll(); }
 function addMember() {
   const name = mNameEl.value.trim();
   if (!name) { mNameEl.focus(); return; }
-  if (members.some(m => m.name.toLowerCase() === name.toLowerCase())) { alert("There's already a member with that name."); return; }
+  if (members.some(m => m.name.toLowerCase() === name.toLowerCase())) { alert(t("dup_member")); return; }
   members.push({ name, color: mColorEl.value || nextColor() });
   saveMembers(); setMe(name);
   mNameEl.value = "";
@@ -590,31 +725,24 @@ const peopleEl = document.getElementById("people");
 const neighbourEl = document.getElementById("neighbour");
 const cancelEditEl = document.getElementById("cancelEdit");
 const notice = document.getElementById("notice");
+const bookCard = document.getElementById("bookCard");
+const bookBtn = document.getElementById("bookBtn");
 startEl.min = ymd(new Date());
 endEl.min = ymd(new Date());
 
 function showNotice(msg, kind) { notice.textContent = msg; notice.className = "notice " + kind; }
 function clearNotice() { notice.className = "notice"; }
 
-// Capacity-aware live feedback. Overlaps are allowed now (families share the house),
-// so instead of blocking we report how full the house gets on the busiest night.
 function checkOverlapLive() {
   const s = startEl.value, e = endEl.value;
   if (!s || !e || e <= s) { clearNotice(); return; }
-  const n = nights(s, e);
-  if (neighbourEl.checked) {
-    showNotice("🏠 Neighbour-house stay — " + n + " night" + (n === 1 ? "" : "s") + ". Shown on the calendar, not counted toward the " + CONFIG.capacity + " beds.", "ok");
-    return;
-  }
+  const np = unit(nights(s, e), "night", "nights");
+  if (neighbourEl.checked) { showNotice(t("neighbour_msg", { nightsPhrase: np, cap: CONFIG.capacity }), "ok"); return; }
   const me = ppl({ people: peopleEl.value });
   const peak = peakOccupancy(s, e, me, editingId);
-  if (peak > CONFIG.capacity) {
-    showNotice("😅 Whoa — up to " + peak + " people, over the " + CONFIG.capacity + " beds! Time to rent the neighbour house 🏠", "warn");
-  } else if (peak > CONFIG.warnAt) {
-    showNotice("🛟 Cozy! Up to " + peak + "/" + CONFIG.capacity + " beds on the busiest night — the house is almost full.", "warn");
-  } else {
-    showNotice("✓ " + n + " night" + (n === 1 ? "" : "s") + " · up to " + peak + " in the house. Plenty of room 🌞", "ok");
-  }
+  if (peak > CONFIG.capacity) showNotice(t("cap_over", { p: peak, cap: CONFIG.capacity }), "warn");
+  else if (peak > CONFIG.warnAt) showNotice(t("cap_almost", { p: peak, cap: CONFIG.capacity }), "warn");
+  else showNotice(t("cap_ok", { nightsPhrase: np, p: peak }), "ok");
 }
 neighbourEl.addEventListener("change", checkOverlapLive);
 peopleEl.addEventListener("input", checkOverlapLive);
@@ -626,17 +754,14 @@ startEl.addEventListener("change", () => {
 });
 endEl.addEventListener("change", () => { pick.end = endEl.value || null; checkOverlapLive(); renderCalendar(); });
 
-const bookCard = document.getElementById("bookCard");
-const bookBtn = document.getElementById("bookBtn");
-
 function resetForm() {
   editingId = null;
   pick = { start: null, end: null };
   startEl.value = ""; endEl.value = ""; noteEl.value = "";
   peopleEl.value = "2"; neighbourEl.checked = false;
   cancelEditEl.style.display = "none";
-  bookBtn.textContent = "Book these dates";
-  document.getElementById("bookHeading").textContent = "Book your dates";
+  bookBtn.textContent = t("book_btn");
+  document.getElementById("bookHeading").textContent = t("book_h");
   bookCard.classList.remove("editing");
 }
 
@@ -648,8 +773,8 @@ function startEdit(b) {
   noteEl.value = b.note || "";
   pick = { start: b.start, end: b.end };
   cancelEditEl.style.display = "block";
-  bookBtn.textContent = "Save changes";
-  document.getElementById("bookHeading").textContent = "Editing " + b.who + "'s stay";
+  bookBtn.textContent = t("save_changes");
+  document.getElementById("bookHeading").textContent = t("editing", { who: b.who });
   bookCard.classList.add("editing");
   checkOverlapLive(); renderCalendar();
   bookCard.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -658,21 +783,16 @@ cancelEditEl.addEventListener("click", () => { resetForm(); clearNotice(); rende
 
 bookBtn.addEventListener("click", () => {
   const who = whoSel.value, s = startEl.value, e = endEl.value;
-  if (!who) { openModal(); showNotice("Add a family member first.", "warn"); return; }
-  if (!s || !e) { showNotice("Pick an arrival and a departure date.", "warn"); return; }
-  if (e <= s) { showNotice("Departure must be after arrival.", "warn"); return; }
+  if (!who) { openModal(); showNotice(t("need_member"), "warn"); return; }
+  if (!s || !e) { showNotice(t("need_dates"), "warn"); return; }
+  if (e <= s) { showNotice(t("dep_after"), "warn"); return; }
   const data = { who, start: s, end: e, people: ppl({ people: peopleEl.value }), neighbour: neighbourEl.checked, note: noteEl.value.trim() };
   const editing = !!editingId;
-
-  if (editing) {
-    const b = bookings.find(x => x.id === editingId);
-    if (b) Object.assign(b, data);
-  } else {
-    bookings.push({ id: Date.now(), ...data });
-  }
+  if (editing) { const b = bookings.find(x => x.id === editingId); if (b) Object.assign(b, data); }
+  else { bookings.push({ id: Date.now(), ...data }); }
   save(); setMe(who);
   resetForm();
-  showNotice(editing ? "✓ Changes saved for " + who + "." : "✓ Booking saved for " + who + ".", "ok");
+  showNotice(t(editing ? "changes_saved" : "saved", { who }), "ok");
   view = startOfMonth(parse(s)); viewMode = "month"; syncSwitch();
   renderAll();
 });
@@ -685,7 +805,7 @@ function onDayClick(dateStr) {
   if (pick.start) endEl.min = pick.start;
   endEl.value = pick.end || "";
   checkOverlapLive(); renderCalendar();
-  if (pick.end) document.getElementById("bookBtn").scrollIntoView({ behavior: "smooth", block: "center" });
+  if (pick.end) bookBtn.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 function monthBlock(year, monthIdx) {
@@ -719,7 +839,6 @@ function monthBlock(year, monthIdx) {
       else if (dateStr > pick.start && dateStr < pick.end) selMid = true;
     } else if (pick.start && dateStr === pick.start) selStart = true;
 
-    // Everyone sleeping here tonight (main house first, neighbour stays last).
     const dayBs = bookingsOn(dateStr).slice().sort((a, b) =>
       (a.neighbour ? 1 : 0) - (b.neighbour ? 1 : 0) || a.start.localeCompare(b.start) || a.id - b.id);
 
@@ -727,7 +846,6 @@ function monthBlock(year, monthIdx) {
       cell.classList.add(selStart ? "sel-start" : selEnd ? "sel-end" : "sel");
     } else if (dayBs.length) {
       cell.classList.add("booked");
-      // Stack one colour band per group occupying the night.
       const bands = document.createElement("div"); bands.className = "bands";
       dayBs.forEach(b => {
         const band = document.createElement("div");
@@ -738,7 +856,7 @@ function monthBlock(year, monthIdx) {
       });
       cell.appendChild(bands);
 
-      const occ = occupancyOn(dateStr); // main house only
+      const occ = occupancyOn(dateStr);
       if (occ > CONFIG.warnAt && viewMode === "month") {
         cell.classList.add("crowded");
         const f = document.createElement("div"); f.className = "flame";
@@ -748,8 +866,8 @@ function monthBlock(year, monthIdx) {
         cell.classList.add("crowded");
       }
 
-      cell.title = dayBs.map(b => b.who + " (" + ppl(b) + (b.neighbour ? ", neighbour" : "") + ")").join(" · ")
-        + (occ ? "  —  " + occ + "/" + CONFIG.capacity + " in the house" : "");
+      cell.title = dayBs.map(b => b.who + " (" + ppl(b) + (b.neighbour ? ", " + t("neighbour_word") : "") + ")").join(" · ")
+        + (occ ? "  —  " + occ + "/" + CONFIG.capacity + " " + t("in_house") : "");
     }
 
     if (dateStr < todayStr) { cell.classList.add("past"); }
@@ -789,33 +907,56 @@ function renderList() {
   ul.innerHTML = "";
   const todayStr = ymd(new Date());
   const upcoming = bookings.filter(b => b.end >= todayStr).sort((a,b) => a.start.localeCompare(b.start));
-  if (!upcoming.length) { ul.innerHTML = '<div class="empty-msg">No bookings yet. Be the first! 🌞</div>'; return; }
+  if (!upcoming.length) { ul.innerHTML = '<div class="empty-msg">' + t("empty_list") + '</div>'; return; }
   upcoming.forEach(b => {
     const li = document.createElement("li");
     const dot = document.createElement("div"); dot.className = "dot"; dot.style.background = colorOf(b.who);
     const wrap = document.createElement("div"); wrap.className = "grow";
     const who = document.createElement("div"); who.className = "who"; who.textContent = b.who;
-    if (b.neighbour) { const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = "🏠 neighbour"; who.appendChild(tag); }
-    const n = nights(b.start, b.end), p = ppl(b);
+    if (b.neighbour) { const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = t("neighbour_tag"); who.appendChild(tag); }
     const when = document.createElement("div"); when.className = "when";
-    when.textContent = rangeFmt(b.start, b.end) + " · " + n + " night" + (n === 1 ? "" : "s") + " · " + p + (p === 1 ? " person" : " people");
+    when.textContent = rangeFmt(b.start, b.end) + " · " + unit(nights(b.start, b.end), "night", "nights") + " · " + unit(ppl(b), "person", "people");
     wrap.appendChild(who); wrap.appendChild(when);
     if (b.note) { const nt = document.createElement("div"); nt.className = "note"; nt.textContent = "“" + b.note + "”"; wrap.appendChild(nt); }
-    const edit = document.createElement("button"); edit.className = "edit"; edit.innerHTML = "✎"; edit.title = "Edit booking";
+    const edit = document.createElement("button"); edit.className = "edit"; edit.innerHTML = "✎"; edit.title = t("edit_title");
     edit.addEventListener("click", () => startEdit(b));
-    const del = document.createElement("button"); del.className = "del"; del.innerHTML = "🗑"; del.title = "Delete booking";
-    del.addEventListener("click", () => { if (confirm("Delete " + b.who + "'s booking (" + rangeFmt(b.start, b.end) + ")?")) { if (editingId === b.id) resetForm(); bookings = bookings.filter(x => x.id !== b.id); save(); renderAll(); } });
+    const del = document.createElement("button"); del.className = "del"; del.innerHTML = "🗑"; del.title = t("del_title");
+    del.addEventListener("click", () => { if (confirm(t("del_confirm", { who: b.who, range: rangeFmt(b.start, b.end) }))) { if (editingId === b.id) resetForm(); bookings = bookings.filter(x => x.id !== b.id); save(); renderAll(); } });
     li.appendChild(dot); li.appendChild(wrap); li.appendChild(edit); li.appendChild(del);
     ul.appendChild(li);
   });
 }
 
-document.getElementById("footnote").textContent =
-  "Bookings are saved on this device (demo version). When you're ready for the whole family to share one calendar, we connect it online.";
+/* ---------- language ---------- */
+const langSel = document.getElementById("langSel");
+const gateLang = document.getElementById("gateLang");
+function applyLang(l) {
+  lang = l;
+  localStorage.setItem(LANG_KEY, l);
+  document.documentElement.lang = l;
+  MONTHS = MONTHS_I18N[l]; DOW = DOW_I18N[l];
+  langSel.value = l; gateLang.value = l;
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.getAttribute("data-i18n-ph")); });
+  document.getElementById("footnote").textContent = t("footnote");
+  if (editingId) {
+    const b = bookings.find(x => x.id === editingId);
+    bookBtn.textContent = t("save_changes");
+    document.getElementById("bookHeading").textContent = b ? t("editing", { who: b.who }) : t("book_h");
+  } else {
+    bookBtn.textContent = t("book_btn");
+    document.getElementById("bookHeading").textContent = t("book_h");
+  }
+  renderPhotos();
+  clearNotice();
+  renderMembers();
+  renderAll();
+}
+langSel.addEventListener("change", () => applyLang(langSel.value));
+gateLang.addEventListener("change", () => applyLang(gateLang.value));
 
 function renderAll() { renderCalendar(); renderList(); }
-renderMembers();
-renderAll();
+applyLang(lang);
 </script>
 </body>
 </html>
