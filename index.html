@@ -198,6 +198,23 @@
   .day.sel, .day.sel-start, .day.sel-end { background: var(--sea) !important; border-color: var(--sea-dark) !important; color: #fff; }
   .day.sel .num, .day.sel-start .num, .day.sel-end .num { color: #fff; }
 
+  /* ---------- Stacked colour bands inside a day ---------- */
+  .bands { position: absolute; inset: 0; display: flex; flex-direction: column; z-index: 0; }
+  .bands > div { flex: 1 1 0; min-height: 0; }
+  .band-nb { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.55) 0 5px, transparent 5px 10px); }
+  .day.booked .num { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+  .day .num, .day .nm, .day .flame { position: relative; z-index: 1; }
+  .day.crowded { outline: 2px solid #c8552f; }
+  .day .flame { position: absolute; top: 2px; right: 3px; font-size: 11px; }
+
+  /* ---------- People / neighbour controls ---------- */
+  .check { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 600;
+    color: var(--ink); margin: 0 0 16px; cursor: pointer; line-height: 1.3; }
+  .check input { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--sea); }
+  .check-sub { font-weight: 400; color: var(--muted); }
+  .cancel-edit { display: block; width: 100%; text-align: center; margin-top: 8px; }
+  .card.editing { outline: 2px solid var(--terra); }
+
   /* ---------- Bookings list ---------- */
   .blist { list-style: none; margin: 0; padding: 0; }
   .blist li { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line); }
@@ -207,8 +224,11 @@
   .blist .when { color: var(--muted); font-size: 13px; }
   .blist .note { color: var(--muted); font-size: 13px; font-style: italic; }
   .blist .grow { flex: 1; }
-  .del { background: none; border: none; color: var(--muted); font-size: 18px; padding: 4px 8px; border-radius: 8px; }
+  .del, .edit { background: none; border: none; color: var(--muted); font-size: 18px; padding: 4px 8px; border-radius: 8px; }
   .del:hover { color: var(--warn); background: #fbe9e1; }
+  .edit:hover { color: var(--sea-dark); background: #e9f1f4; }
+  .blist .tag { display: inline-block; font-size: 11px; font-weight: 700; color: var(--sea-dark);
+    background: #e9f1f4; border: 1px solid #cfe2e9; border-radius: 6px; padding: 0 6px; margin-left: 6px; }
   .empty-msg { color: var(--muted); font-size: 14px; text-align: center; padding: 16px 0; }
 
   .footnote { color: var(--muted); font-size: 12px; text-align: center; margin-top: 26px; line-height: 1.5; }
@@ -240,7 +260,7 @@
       <div class="row" id="memberForm">
         <div class="field" style="flex:2">
           <label for="mName">Name</label>
-          <input type="text" id="mName" placeholder="e.g. Jorge" maxlength="24" />
+          <input type="text" id="mName" placeholder="e.g. Chrissie" maxlength="24" />
         </div>
         <div class="field" style="flex:0 0 64px">
           <label for="mColor">Colour</label>
@@ -266,8 +286,8 @@
   <main class="wrap">
 
     <!-- ============ BOOK ============ -->
-    <section class="card">
-      <h2>Book your dates</h2>
+    <section class="card" id="bookCard">
+      <h2 id="bookHeading">Book your dates</h2>
       <div class="who-row">
         <div class="field">
           <label for="who">Who's booking?</label>
@@ -286,11 +306,19 @@
         </div>
       </div>
       <p class="pick-hint">📅 Or just tap the days on the calendar below — it fills these dates for you.</p>
+      <div class="row">
+        <div class="field" style="max-width:150px">
+          <label for="people">How many people?</label>
+          <input type="number" id="people" min="1" max="40" value="2" />
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="neighbour" /> 🏠 Neighbour house <span class="check-sub">— shows on the calendar but doesn't count toward capacity</span></label>
       <div class="field">
         <label for="note">Note (optional)</label>
         <textarea id="note" placeholder="e.g. bringing the dog, arriving late…"></textarea>
       </div>
       <button class="book-btn" id="bookBtn">Book these dates</button>
+      <button class="link-btn cancel-edit" id="cancelEdit" style="display:none">Cancel edit</button>
       <div id="notice" class="notice"></div>
     </section>
 
@@ -332,6 +360,10 @@ const CONFIG = {
   houseName: "Summer House",
   address: "C. Río Guadiana, 99, 03191 Pilar de la Horadada, Alicante, Spain",
 
+  // How many people the house sleeps, and when to start warning "almost full".
+  capacity: 8,
+  warnAt: 6,
+
   // OPTIONAL starter members (first load only). Family add the rest themselves.
   members: [],
 
@@ -359,6 +391,7 @@ let members = loadMembers();
 let view = startOfMonth(new Date());
 let viewMode = "month";
 let pick = { start: null, end: null };
+let editingId = null; // when set, the form edits this booking instead of creating one
 
 /* ---------- storage ---------- */
 function load() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch { return []; } }
@@ -390,7 +423,24 @@ function rangeFmt(a, b) {
 function nights(s, e) { return Math.round((parse(e) - parse(s)) / 86400000); }
 function colorOf(name) { const m = members.find(x => x.name === name); return m ? m.color : "#8a8178"; }
 function overlaps(s1, e1, s2, e2) { return s1 < e2 && e1 > s2; }
-function clashesFor(s, e) { return bookings.filter(b => overlaps(s, e, b.start, b.end)); }
+function ppl(b) { return Math.max(1, parseInt(b.people, 10) || 1); }
+
+// Bookings sleeping in the MAIN house on a given night (neighbour stays excluded).
+function bookingsOn(dateStr) { return bookings.filter(b => dateStr >= b.start && dateStr < b.end); }
+function occupancyOn(dateStr, excludeId) {
+  return bookingsOn(dateStr)
+    .filter(b => !b.neighbour && b.id !== excludeId)
+    .reduce((sum, b) => sum + ppl(b), 0);
+}
+// Peak main-house occupancy over the nights of [s, e), optionally adding a prospective booking.
+function peakOccupancy(s, e, addPeople, excludeId) {
+  let peak = 0;
+  for (let d = parse(s); ymd(d) < e; d.setDate(d.getDate() + 1)) {
+    const occ = occupancyOn(ymd(d), excludeId) + (addPeople || 0);
+    if (occ > peak) peak = occ;
+  }
+  return peak;
+}
 
 /* ---------- gate ---------- */
 const gate = document.getElementById("gate");
@@ -500,6 +550,9 @@ whoSel.addEventListener("change", () => { if (whoSel.value) setMe(whoSel.value);
 const startEl = document.getElementById("start");
 const endEl = document.getElementById("end");
 const noteEl = document.getElementById("note");
+const peopleEl = document.getElementById("people");
+const neighbourEl = document.getElementById("neighbour");
+const cancelEditEl = document.getElementById("cancelEdit");
 const notice = document.getElementById("notice");
 startEl.min = ymd(new Date());
 endEl.min = ymd(new Date());
@@ -507,19 +560,28 @@ endEl.min = ymd(new Date());
 function showNotice(msg, kind) { notice.textContent = msg; notice.className = "notice " + kind; }
 function clearNotice() { notice.className = "notice"; }
 
+// Capacity-aware live feedback. Overlaps are allowed now (families share the house),
+// so instead of blocking we report how full the house gets on the busiest night.
 function checkOverlapLive() {
   const s = startEl.value, e = endEl.value;
   if (!s || !e || e <= s) { clearNotice(); return; }
-  const clash = clashesFor(s, e);
-  if (clash.length) {
-    const names = [...new Set(clash.map(c => c.who))].join(", ");
-    const freeFrom = clash.map(c => c.end).sort().pop();
-    showNotice("⛔ Taken by " + names + ". You can arrive from " + fmt(freeFrom) + " (their checkout day).", "warn");
+  const n = nights(s, e);
+  if (neighbourEl.checked) {
+    showNotice("🏠 Neighbour-house stay — " + n + " night" + (n === 1 ? "" : "s") + ". Shown on the calendar, not counted toward the " + CONFIG.capacity + " beds.", "ok");
+    return;
+  }
+  const me = ppl({ people: peopleEl.value });
+  const peak = peakOccupancy(s, e, me, editingId);
+  if (peak > CONFIG.capacity) {
+    showNotice("😅 Whoa — up to " + peak + " people, over the " + CONFIG.capacity + " beds! Time to rent the neighbour house 🏠", "warn");
+  } else if (peak > CONFIG.warnAt) {
+    showNotice("🛟 Cozy! Up to " + peak + "/" + CONFIG.capacity + " beds on the busiest night — the house is almost full.", "warn");
   } else {
-    const n = nights(s, e);
-    showNotice("✓ Free — " + n + " night" + (n === 1 ? "" : "s") + ".", "ok");
+    showNotice("✓ " + n + " night" + (n === 1 ? "" : "s") + " · up to " + peak + " in the house. Plenty of room 🌞", "ok");
   }
 }
+neighbourEl.addEventListener("change", checkOverlapLive);
+peopleEl.addEventListener("input", checkOverlapLive);
 startEl.addEventListener("change", () => {
   if (startEl.value) endEl.min = startEl.value;
   pick.start = startEl.value || null;
@@ -528,24 +590,53 @@ startEl.addEventListener("change", () => {
 });
 endEl.addEventListener("change", () => { pick.end = endEl.value || null; checkOverlapLive(); renderCalendar(); });
 
-document.getElementById("bookBtn").addEventListener("click", () => {
+const bookCard = document.getElementById("bookCard");
+const bookBtn = document.getElementById("bookBtn");
+
+function resetForm() {
+  editingId = null;
+  pick = { start: null, end: null };
+  startEl.value = ""; endEl.value = ""; noteEl.value = "";
+  peopleEl.value = "2"; neighbourEl.checked = false;
+  cancelEditEl.style.display = "none";
+  bookBtn.textContent = "Book these dates";
+  document.getElementById("bookHeading").textContent = "Book your dates";
+  bookCard.classList.remove("editing");
+}
+
+function startEdit(b) {
+  editingId = b.id;
+  if (members.some(m => m.name === b.who)) whoSel.value = b.who;
+  startEl.value = b.start; endEl.min = b.start; endEl.value = b.end;
+  peopleEl.value = ppl(b); neighbourEl.checked = !!b.neighbour;
+  noteEl.value = b.note || "";
+  pick = { start: b.start, end: b.end };
+  cancelEditEl.style.display = "block";
+  bookBtn.textContent = "Save changes";
+  document.getElementById("bookHeading").textContent = "Editing " + b.who + "'s stay";
+  bookCard.classList.add("editing");
+  checkOverlapLive(); renderCalendar();
+  bookCard.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+cancelEditEl.addEventListener("click", () => { resetForm(); clearNotice(); renderCalendar(); });
+
+bookBtn.addEventListener("click", () => {
   const who = whoSel.value, s = startEl.value, e = endEl.value;
   if (!who) { openModal(); showNotice("Add a family member first.", "warn"); return; }
   if (!s || !e) { showNotice("Pick an arrival and a departure date.", "warn"); return; }
   if (e <= s) { showNotice("Departure must be after arrival.", "warn"); return; }
-  const clash = clashesFor(s, e);
-  if (clash.length) {
-    const names = [...new Set(clash.map(c => c.who))].join(", ");
-    const freeFrom = clash.map(c => c.end).sort().pop();
-    showNotice("⛔ Can't book — taken by " + names + ". You can arrive from " + fmt(freeFrom) + " (their checkout day).", "warn");
-    return;
-  }
+  const data = { who, start: s, end: e, people: ppl({ people: peopleEl.value }), neighbour: neighbourEl.checked, note: noteEl.value.trim() };
+  const editing = !!editingId;
 
-  bookings.push({ id: Date.now(), who, start: s, end: e, note: noteEl.value.trim() });
+  if (editing) {
+    const b = bookings.find(x => x.id === editingId);
+    if (b) Object.assign(b, data);
+  } else {
+    bookings.push({ id: Date.now(), ...data });
+  }
   save(); setMe(who);
-  noteEl.value = ""; pick = { start: null, end: null };
-  startEl.value = ""; endEl.value = "";
-  showNotice("✓ Booking saved for " + who + ".", "ok");
+  resetForm();
+  showNotice(editing ? "✓ Changes saved for " + who + "." : "✓ Booking saved for " + who + ".", "ok");
   view = startOfMonth(parse(s)); viewMode = "month"; syncSwitch();
   renderAll();
 });
@@ -585,9 +676,6 @@ function monthBlock(year, monthIdx) {
     cell.className = "day" + (dateStr === todayStr ? " today" : "");
     const num = document.createElement("div"); num.className = "num"; num.textContent = d; cell.appendChild(num);
 
-    const arr = bookings.find(b => b.start === dateStr);                   // arrives today (afternoon)
-    const dep = bookings.find(b => b.end === dateStr);                     // leaves today (morning)
-    const mid = bookings.find(b => b.start < dateStr && dateStr < b.end);  // here the whole day/night
     let selStart = false, selEnd = false, selMid = false;
     if (pick.start && pick.end) {
       if (dateStr === pick.start) selStart = true;
@@ -595,31 +683,41 @@ function monthBlock(year, monthIdx) {
       else if (dateStr > pick.start && dateStr < pick.end) selMid = true;
     } else if (pick.start && dateStr === pick.start) selStart = true;
 
-    const addName = txt => { if (viewMode === "month") { const nm = document.createElement("div"); nm.className = "nm"; nm.textContent = txt; cell.appendChild(nm); } };
+    // Everyone sleeping here tonight (main house first, neighbour stays last).
+    const dayBs = bookingsOn(dateStr).slice().sort((a, b) =>
+      (a.neighbour ? 1 : 0) - (b.neighbour ? 1 : 0) || a.start.localeCompare(b.start) || a.id - b.id);
 
     if (selStart || selEnd || selMid) {
       cell.classList.add(selStart ? "sel-start" : selEnd ? "sel-end" : "sel");
-    } else if (arr && dep && arr.id !== dep.id) {
-      // Turnover: top-left = who leaves, bottom-right = who arrives.
-      cell.classList.add("filled");
-      cell.style.background = "linear-gradient(135deg, " + colorOf(dep.who) + " 0 50%, " + colorOf(arr.who) + " 50% 100%)";
-      cell.title = "Out: " + dep.who + " · In: " + arr.who;
-      addName(dep.who + " → " + arr.who);
-    } else if (mid) {
-      cell.classList.add("filled");
-      cell.style.background = colorOf(mid.who);
-      cell.title = mid.who + " • " + rangeFmt(mid.start, mid.end) + (mid.note ? " — " + mid.note : "");
-      addName(mid.who);
-    } else if (arr) {
-      // Arrival: morning still free → top-left white, bottom-right the arriving colour.
-      cell.classList.add("filled", "m-arr");
-      cell.style.background = "linear-gradient(135deg, #fff 0 50%, " + colorOf(arr.who) + " 50% 100%)";
-      cell.title = "Arrival: " + arr.who + " • " + rangeFmt(arr.start, arr.end);
-    } else if (dep) {
-      // Checkout: occupied in the morning, free after → top-left colour, bottom-right white.
-      cell.classList.add("filled", "checkout");
-      cell.style.background = "linear-gradient(135deg, " + colorOf(dep.who) + " 0 50%, #fff 50% 100%)";
-      cell.title = "Checkout: " + dep.who + " — free to arrive from this day";
+    } else if (dayBs.length) {
+      cell.classList.add("booked");
+      // Stack one colour band per group occupying the night.
+      const bands = document.createElement("div"); bands.className = "bands";
+      dayBs.forEach(b => {
+        const band = document.createElement("div");
+        band.style.background = colorOf(b.who);
+        if (b.neighbour) band.classList.add("band-nb");
+        bands.appendChild(band);
+      });
+      cell.appendChild(bands);
+
+      const occ = occupancyOn(dateStr); // main house only
+      if (occ > CONFIG.warnAt && viewMode === "month") {
+        cell.classList.add("crowded");
+        const f = document.createElement("div"); f.className = "flame";
+        f.textContent = occ > CONFIG.capacity ? "🚨" : "🔥";
+        cell.appendChild(f);
+      } else if (occ > CONFIG.warnAt) {
+        cell.classList.add("crowded");
+      }
+
+      cell.title = dayBs.map(b => b.who + " (" + ppl(b) + (b.neighbour ? ", neighbour" : "") + ")").join(" · ")
+        + (occ ? "  —  " + occ + "/" + CONFIG.capacity + " in the house" : "");
+      if (viewMode === "month") {
+        const nm = document.createElement("div"); nm.className = "nm";
+        nm.textContent = dayBs.length === 1 ? dayBs[0].who : dayBs.length + " groups · " + occ;
+        cell.appendChild(nm);
+      }
     }
 
     if (dateStr < todayStr) { cell.classList.add("past"); }
@@ -665,13 +763,17 @@ function renderList() {
     const dot = document.createElement("div"); dot.className = "dot"; dot.style.background = colorOf(b.who);
     const wrap = document.createElement("div"); wrap.className = "grow";
     const who = document.createElement("div"); who.className = "who"; who.textContent = b.who;
-    const n = nights(b.start, b.end);
-    const when = document.createElement("div"); when.className = "when"; when.textContent = rangeFmt(b.start, b.end) + " · " + n + " night" + (n === 1 ? "" : "s");
+    if (b.neighbour) { const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = "🏠 neighbour"; who.appendChild(tag); }
+    const n = nights(b.start, b.end), p = ppl(b);
+    const when = document.createElement("div"); when.className = "when";
+    when.textContent = rangeFmt(b.start, b.end) + " · " + n + " night" + (n === 1 ? "" : "s") + " · " + p + (p === 1 ? " person" : " people");
     wrap.appendChild(who); wrap.appendChild(when);
     if (b.note) { const nt = document.createElement("div"); nt.className = "note"; nt.textContent = "“" + b.note + "”"; wrap.appendChild(nt); }
+    const edit = document.createElement("button"); edit.className = "edit"; edit.innerHTML = "✎"; edit.title = "Edit booking";
+    edit.addEventListener("click", () => startEdit(b));
     const del = document.createElement("button"); del.className = "del"; del.innerHTML = "🗑"; del.title = "Delete booking";
-    del.addEventListener("click", () => { if (confirm("Delete " + b.who + "'s booking (" + rangeFmt(b.start, b.end) + ")?")) { bookings = bookings.filter(x => x.id !== b.id); save(); renderAll(); } });
-    li.appendChild(dot); li.appendChild(wrap); li.appendChild(del);
+    del.addEventListener("click", () => { if (confirm("Delete " + b.who + "'s booking (" + rangeFmt(b.start, b.end) + ")?")) { if (editingId === b.id) resetForm(); bookings = bookings.filter(x => x.id !== b.id); save(); renderAll(); } });
+    li.appendChild(dot); li.appendChild(wrap); li.appendChild(edit); li.appendChild(del);
     ul.appendChild(li);
   });
 }
