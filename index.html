@@ -200,7 +200,9 @@
 
   /* ---------- Stacked colour bands inside a day ---------- */
   .bands { position: absolute; inset: 0; display: flex; flex-direction: column; z-index: 0; }
-  .bands > div { flex: 1 1 0; min-height: 0; }
+  .bands > div { flex: 1 1 0; min-height: 0; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 11px; font-weight: 700; line-height: 1; padding: 0 3px;
+    overflow: hidden; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,.55); }
   .band-nb { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.55) 0 5px, transparent 5px 10px); }
   .day.booked .num { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
   .day .num, .day .nm, .day .flame { position: relative; z-index: 1; }
@@ -697,6 +699,7 @@ function monthBlock(year, monthIdx) {
         const band = document.createElement("div");
         band.style.background = colorOf(b.who);
         if (b.neighbour) band.classList.add("band-nb");
+        if (viewMode === "month") band.textContent = b.who + (b.neighbour ? " 🏠" : "");
         bands.appendChild(band);
       });
       cell.appendChild(bands);
@@ -713,11 +716,6 @@ function monthBlock(year, monthIdx) {
 
       cell.title = dayBs.map(b => b.who + " (" + ppl(b) + (b.neighbour ? ", neighbour" : "") + ")").join(" · ")
         + (occ ? "  —  " + occ + "/" + CONFIG.capacity + " in the house" : "");
-      if (viewMode === "month") {
-        const nm = document.createElement("div"); nm.className = "nm";
-        nm.textContent = dayBs.length === 1 ? dayBs[0].who : dayBs.length + " groups · " + occ;
-        cell.appendChild(nm);
-      }
     }
 
     if (dateStr < todayStr) { cell.classList.add("past"); }
