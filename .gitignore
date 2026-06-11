@@ -1,0 +1,4 @@
+.claude/
+*.zip
+._*
+.DS_Store
