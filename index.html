@@ -102,7 +102,14 @@
   label { display: block; font-size: 13px; font-weight: 600; color: var(--ink); margin: 0 0 6px; }
   .field { margin-bottom: 14px; }
   .row { display: flex; gap: 12px; }
-  .row .field { flex: 1; }
+  .row .field { flex: 1; min-width: 0; }
+  .pick-hint { color: var(--sea-dark); font-size: 13px; background: #e9f1f4; border: 1px solid #cfe2e9;
+    border-radius: 10px; padding: 9px 12px; margin: 0 0 14px; }
+  /* On phones the two date pickers don't fit side by side — stack them. */
+  @media (max-width: 480px) {
+    .row.dates { flex-direction: column; gap: 0; }
+    .row.dates .field { margin-bottom: 14px; }
+  }
   select, input[type="date"], input[type="text"], textarea {
     width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--line);
     border-radius: 12px; background: #fff; color: var(--ink);
@@ -187,6 +194,7 @@
   .day.pickable:hover { border-color: var(--sea); }
   .day.filled { color: #fff; border-color: transparent; }
   .day.filled .num, .day.filled .nm { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
+  .day.m-arr .num { color: var(--ink); text-shadow: 0 1px 1px rgba(255,255,255,.85); }
   .day.sel, .day.sel-start, .day.sel-end { background: var(--sea) !important; border-color: var(--sea-dark) !important; color: #fff; }
   .day.sel .num, .day.sel-start .num, .day.sel-end .num { color: #fff; }
 
@@ -267,7 +275,7 @@
         </div>
         <button class="link-btn" id="manageLink">Manage</button>
       </div>
-      <div class="row">
+      <div class="row dates">
         <div class="field">
           <label for="start">Arrival</label>
           <input type="date" id="start" />
@@ -277,6 +285,7 @@
           <input type="date" id="end" />
         </div>
       </div>
+      <p class="pick-hint">📅 Or just tap the days on the calendar below — it fills these dates for you.</p>
       <div class="field">
         <label for="note">Note (optional)</label>
         <textarea id="note" placeholder="e.g. bringing the dog, arriving late…"></textarea>
@@ -576,8 +585,9 @@ function monthBlock(year, monthIdx) {
     cell.className = "day" + (dateStr === todayStr ? " today" : "");
     const num = document.createElement("div"); num.className = "num"; num.textContent = d; cell.appendChild(num);
 
-    const occupant = bookings.find(b => dateStr >= b.start && dateStr < b.end); // staying this night
-    const departer = bookings.find(b => b.end === dateStr);                     // checking out this morning
+    const arr = bookings.find(b => b.start === dateStr);                   // arrives today (afternoon)
+    const dep = bookings.find(b => b.end === dateStr);                     // leaves today (morning)
+    const mid = bookings.find(b => b.start < dateStr && dateStr < b.end);  // here the whole day/night
     let selStart = false, selEnd = false, selMid = false;
     if (pick.start && pick.end) {
       if (dateStr === pick.start) selStart = true;
@@ -585,25 +595,31 @@ function monthBlock(year, monthIdx) {
       else if (dateStr > pick.start && dateStr < pick.end) selMid = true;
     } else if (pick.start && dateStr === pick.start) selStart = true;
 
+    const addName = txt => { if (viewMode === "month") { const nm = document.createElement("div"); nm.className = "nm"; nm.textContent = txt; cell.appendChild(nm); } };
+
     if (selStart || selEnd || selMid) {
       cell.classList.add(selStart ? "sel-start" : selEnd ? "sel-end" : "sel");
-    } else if (occupant && departer && occupant.id !== departer.id) {
-      // Turnover day: split diagonally — top-left = who leaves, bottom-right = who arrives.
+    } else if (arr && dep && arr.id !== dep.id) {
+      // Turnover: top-left = who leaves, bottom-right = who arrives.
       cell.classList.add("filled");
-      cell.style.background = "linear-gradient(135deg, " + colorOf(departer.who) + " 0 50%, " + colorOf(occupant.who) + " 50% 100%)";
-      cell.title = "Out: " + departer.who + " · In: " + occupant.who;
-      if (viewMode === "month") { const nm = document.createElement("div"); nm.className = "nm"; nm.textContent = departer.who + " → " + occupant.who; cell.appendChild(nm); }
-    } else if (occupant) {
+      cell.style.background = "linear-gradient(135deg, " + colorOf(dep.who) + " 0 50%, " + colorOf(arr.who) + " 50% 100%)";
+      cell.title = "Out: " + dep.who + " · In: " + arr.who;
+      addName(dep.who + " → " + arr.who);
+    } else if (mid) {
       cell.classList.add("filled");
-      cell.style.background = colorOf(occupant.who);
-      cell.title = occupant.who + " • " + rangeFmt(occupant.start, occupant.end) + (occupant.note ? " — " + occupant.note : "");
-      if (viewMode === "month") { const nm = document.createElement("div"); nm.className = "nm"; nm.textContent = occupant.who; cell.appendChild(nm); }
-    } else if (departer) {
-      // Checkout morning, nobody new yet: half-fill (top-left) = the leaving guest.
-      // The free half makes it obvious you can arrive on this day for a same-day swap.
+      cell.style.background = colorOf(mid.who);
+      cell.title = mid.who + " • " + rangeFmt(mid.start, mid.end) + (mid.note ? " — " + mid.note : "");
+      addName(mid.who);
+    } else if (arr) {
+      // Arrival: morning still free → top-left white, bottom-right the arriving colour.
+      cell.classList.add("filled", "m-arr");
+      cell.style.background = "linear-gradient(135deg, #fff 0 50%, " + colorOf(arr.who) + " 50% 100%)";
+      cell.title = "Arrival: " + arr.who + " • " + rangeFmt(arr.start, arr.end);
+    } else if (dep) {
+      // Checkout: occupied in the morning, free after → top-left colour, bottom-right white.
       cell.classList.add("filled", "checkout");
-      cell.style.background = "linear-gradient(135deg, " + colorOf(departer.who) + " 0 50%, #fff 50% 100%)";
-      cell.title = "Checkout: " + departer.who + " — free to arrive from this day";
+      cell.style.background = "linear-gradient(135deg, " + colorOf(dep.who) + " 0 50%, #fff 50% 100%)";
+      cell.title = "Checkout: " + dep.who + " — free to arrive from this day";
     }
 
     if (dateStr < todayStr) { cell.classList.add("past"); }
