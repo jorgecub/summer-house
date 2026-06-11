@@ -699,7 +699,7 @@ function monthBlock(year, monthIdx) {
         const band = document.createElement("div");
         band.style.background = colorOf(b.who);
         if (b.neighbour) band.classList.add("band-nb");
-        if (viewMode === "month") band.textContent = b.who + (b.neighbour ? " 🏠" : "");
+        if (viewMode === "month") band.textContent = b.who + " · " + ppl(b) + (b.neighbour ? " 🏠" : "");
         bands.appendChild(band);
       });
       cell.appendChild(bands);
