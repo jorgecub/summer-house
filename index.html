@@ -636,6 +636,9 @@ function nights(s, e) { return Math.round((parse(e) - parse(s)) / 86400000); }
 function colorOf(name) { const m = members.find(x => x.name === name); return m ? m.color : "#8a8178"; }
 function ppl(b) { return Math.max(1, parseInt(b.people, 10) || 1); }
 function bookingsOn(dateStr) { return bookings.filter(b => dateStr >= b.start && dateStr < b.end); }
+// For the calendar we mark every day of a stay INCLUDING the departure day,
+// so a booking shows across its whole range (arrival → departure). Capacity still counts nights only.
+function staysOn(dateStr) { return bookings.filter(b => dateStr >= b.start && dateStr <= b.end); }
 function occupancyOn(dateStr, excludeId) {
   return bookingsOn(dateStr).filter(b => !b.neighbour && b.id !== excludeId).reduce((sum, b) => sum + ppl(b), 0);
 }
@@ -893,7 +896,7 @@ function monthBlock(year, monthIdx) {
       else if (dateStr > pick.start && dateStr < pick.end) selMid = true;
     } else if (pick.start && dateStr === pick.start) selStart = true;
 
-    const dayBs = bookingsOn(dateStr).slice().sort((a, b) =>
+    const dayBs = staysOn(dateStr).slice().sort((a, b) =>
       (a.neighbour ? 1 : 0) - (b.neighbour ? 1 : 0) || a.start.localeCompare(b.start) || a.id - b.id);
 
     if (selStart || selEnd || selMid) {
