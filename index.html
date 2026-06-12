@@ -281,20 +281,6 @@
         </div>
       </div>
       <button class="member-btn" id="addMemberBtn" data-i18n="add_member">+ Add member</button>
-
-      <hr class="modal-sep" />
-      <h3 class="modal-sub-h" data-i18n="pwd_h">Family password</h3>
-      <p class="section-sub" data-i18n="pwd_sub">Enter the current password to set a new one.</p>
-      <div class="field">
-        <label for="oldPwd" data-i18n="pwd_old">Current password</label>
-        <input type="password" id="oldPwd" autocomplete="off" />
-      </div>
-      <div class="field">
-        <label for="newPwd" data-i18n="pwd_new">New password</label>
-        <input type="password" id="newPwd" autocomplete="off" />
-      </div>
-      <button class="member-btn" id="changePwdBtn" data-i18n="pwd_btn">Change password</button>
-      <div id="pwdMsg" class="notice" style="margin-top:12px"></div>
     </div>
   </div>
 
@@ -347,6 +333,10 @@
         </div>
       </div>
       <label class="check"><input type="checkbox" id="neighbour" /> <span><span data-i18n="neighbour_l">🏠 Neighbour house</span> <span class="check-sub" data-i18n="neighbour_sub">— shows on the calendar but doesn't count toward capacity</span></span></label>
+      <div class="field" id="neighbourNameField" style="display:none">
+        <label for="neighbourName" data-i18n="neighbour_name_l">Which neighbour's house?</label>
+        <input type="text" id="neighbourName" data-i18n-ph="neighbour_name_ph" placeholder="e.g. the Müllers next door" maxlength="40" />
+      </div>
       <div class="field">
         <label for="note" data-i18n="note_l">Note (optional)</label>
         <textarea id="note" data-i18n-ph="note_ph" placeholder="e.g. bringing the dog, arriving late…"></textarea>
@@ -389,7 +379,7 @@
    ⚙️  CONFIG — change these values, nothing else needed.
    ================================================================ */
 const CONFIG = {
-  password: "summer2026",
+  password: "gromann",
 
   houseName: "Summer House",
   address: "C. Río Guadiana, 99, 03191 Pilar de la Horadada, Alicante, Spain",
@@ -423,6 +413,7 @@ const T = {
     pick_hint: "📅 Or just tap the days on the calendar below — it fills these dates for you.",
     people_l: "How many people?", neighbour_l: "🏠 Neighbour house",
     neighbour_sub: "— shows on the calendar but doesn't count toward capacity",
+    neighbour_name_l: "Which neighbour's house?", neighbour_name_ph: "e.g. the Müllers next door",
     note_l: "Note (optional)", note_ph: "e.g. bringing the dog, arriving late…",
     book_btn: "Book these dates", save_changes: "Save changes", cancel_edit: "Cancel edit",
     editing: "Editing {who}'s stay",
@@ -459,6 +450,7 @@ const T = {
     pick_hint: "📅 O toca los días en el calendario de abajo — rellena las fechas por ti.",
     people_l: "¿Cuántas personas?", neighbour_l: "🏠 Casa vecina",
     neighbour_sub: "— aparece en el calendario pero no cuenta para la capacidad",
+    neighbour_name_l: "¿Casa de qué vecino?", neighbour_name_ph: "ej. casa de los Müller",
     note_l: "Nota (opcional)", note_ph: "ej. traemos el perro, llegamos tarde…",
     book_btn: "Reservar estas fechas", save_changes: "Guardar cambios", cancel_edit: "Cancelar edición",
     editing: "Editando la estancia de {who}",
@@ -495,6 +487,7 @@ const T = {
     pick_hint: "📅 Oder tippe die Tage im Kalender unten an — die Termine werden automatisch ausgefüllt.",
     people_l: "Wie viele Personen?", neighbour_l: "🏠 Nachbarhaus",
     neighbour_sub: "— erscheint im Kalender, zählt aber nicht zur Belegung",
+    neighbour_name_l: "Welches Nachbarhaus?", neighbour_name_ph: "z.B. bei Familie Müller",
     note_l: "Notiz (optional)", note_ph: "z.B. Hund dabei, späte Anreise…",
     book_btn: "Diese Termine buchen", save_changes: "Änderungen speichern", cancel_edit: "Bearbeitung abbrechen",
     editing: "Aufenthalt von {who} bearbeiten",
@@ -530,11 +523,9 @@ const DOW_I18N = {
 const STORE_KEY = "summerHouse.bookings.v1";
 const MEMBERS_KEY = "summerHouse.members.v1";
 const ME_KEY = "summerHouse.me.v1";
-const PWD_KEY = "summerHouse.pwd.v1";
 const LANG_KEY = "summerHouse.lang.v1";
 const VIEW_COUNT = { month: 1, "3": 3, "6": 6, year: 12 };
 
-function effectivePassword() { return localStorage.getItem(PWD_KEY) || CONFIG.password; }
 function detectLang() {
   const stored = localStorage.getItem(LANG_KEY);
   if (stored && ["en","es","de"].includes(stored)) return stored;
@@ -606,7 +597,7 @@ const gate = document.getElementById("gate");
 const gateInput = document.getElementById("gateInput");
 const gateErr = document.getElementById("gateErr");
 function tryEnter() {
-  if (gateInput.value === effectivePassword()) {
+  if (gateInput.value === CONFIG.password) {
     gate.style.display = "none";
     sessionStorage.setItem("summerHouse.ok", "1");
     if (!members.length) openModal();
@@ -654,20 +645,6 @@ document.getElementById("openMembers").addEventListener("click", openModal);
 document.getElementById("manageLink").addEventListener("click", openModal);
 document.getElementById("closeMembers").addEventListener("click", closeModal);
 modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
-
-/* ---------- change family password ---------- */
-const oldPwdEl = document.getElementById("oldPwd");
-const newPwdEl = document.getElementById("newPwd");
-const pwdMsg = document.getElementById("pwdMsg");
-document.getElementById("changePwdBtn").addEventListener("click", () => {
-  const oldP = oldPwdEl.value, newP = newPwdEl.value.trim();
-  if (oldP !== effectivePassword()) { pwdMsg.className = "notice warn"; pwdMsg.textContent = t("pwd_wrong"); return; }
-  if (newP.length < 3) { pwdMsg.className = "notice warn"; pwdMsg.textContent = t("pwd_short"); return; }
-  if (newP === oldP) { pwdMsg.className = "notice warn"; pwdMsg.textContent = t("pwd_same"); return; }
-  localStorage.setItem(PWD_KEY, newP);
-  oldPwdEl.value = ""; newPwdEl.value = "";
-  pwdMsg.className = "notice ok"; pwdMsg.textContent = t("pwd_changed");
-});
 
 function renderMembers() {
   const ul = document.getElementById("mlist");
@@ -723,7 +700,10 @@ const endEl = document.getElementById("end");
 const noteEl = document.getElementById("note");
 const peopleEl = document.getElementById("people");
 const neighbourEl = document.getElementById("neighbour");
+const neighbourNameEl = document.getElementById("neighbourName");
+const neighbourNameField = document.getElementById("neighbourNameField");
 const cancelEditEl = document.getElementById("cancelEdit");
+function toggleNeighbourField() { neighbourNameField.style.display = neighbourEl.checked ? "block" : "none"; }
 const notice = document.getElementById("notice");
 const bookCard = document.getElementById("bookCard");
 const bookBtn = document.getElementById("bookBtn");
@@ -744,7 +724,7 @@ function checkOverlapLive() {
   else if (peak > CONFIG.warnAt) showNotice(t("cap_almost", { p: peak, cap: CONFIG.capacity }), "warn");
   else showNotice(t("cap_ok", { nightsPhrase: np, p: peak }), "ok");
 }
-neighbourEl.addEventListener("change", checkOverlapLive);
+neighbourEl.addEventListener("change", () => { toggleNeighbourField(); checkOverlapLive(); });
 peopleEl.addEventListener("input", checkOverlapLive);
 startEl.addEventListener("change", () => {
   if (startEl.value) endEl.min = startEl.value;
@@ -759,6 +739,7 @@ function resetForm() {
   pick = { start: null, end: null };
   startEl.value = ""; endEl.value = ""; noteEl.value = "";
   peopleEl.value = "2"; neighbourEl.checked = false;
+  neighbourNameEl.value = ""; toggleNeighbourField();
   cancelEditEl.style.display = "none";
   bookBtn.textContent = t("book_btn");
   document.getElementById("bookHeading").textContent = t("book_h");
@@ -770,6 +751,7 @@ function startEdit(b) {
   if (members.some(m => m.name === b.who)) whoSel.value = b.who;
   startEl.value = b.start; endEl.min = b.start; endEl.value = b.end;
   peopleEl.value = ppl(b); neighbourEl.checked = !!b.neighbour;
+  neighbourNameEl.value = b.neighbourName || ""; toggleNeighbourField();
   noteEl.value = b.note || "";
   pick = { start: b.start, end: b.end };
   cancelEditEl.style.display = "block";
@@ -786,7 +768,7 @@ bookBtn.addEventListener("click", () => {
   if (!who) { openModal(); showNotice(t("need_member"), "warn"); return; }
   if (!s || !e) { showNotice(t("need_dates"), "warn"); return; }
   if (e <= s) { showNotice(t("dep_after"), "warn"); return; }
-  const data = { who, start: s, end: e, people: ppl({ people: peopleEl.value }), neighbour: neighbourEl.checked, note: noteEl.value.trim() };
+  const data = { who, start: s, end: e, people: ppl({ people: peopleEl.value }), neighbour: neighbourEl.checked, neighbourName: neighbourEl.checked ? neighbourNameEl.value.trim() : "", note: noteEl.value.trim() };
   const editing = !!editingId;
   if (editing) { const b = bookings.find(x => x.id === editingId); if (b) Object.assign(b, data); }
   else { bookings.push({ id: Date.now(), ...data }); }
@@ -866,7 +848,7 @@ function monthBlock(year, monthIdx) {
         cell.classList.add("crowded");
       }
 
-      cell.title = dayBs.map(b => b.who + " (" + ppl(b) + (b.neighbour ? ", " + t("neighbour_word") : "") + ")").join(" · ")
+      cell.title = dayBs.map(b => b.who + " (" + ppl(b) + (b.neighbour ? ", " + t("neighbour_word") + (b.neighbourName ? ": " + b.neighbourName : "") : "") + ")").join(" · ")
         + (occ ? "  —  " + occ + "/" + CONFIG.capacity + " " + t("in_house") : "");
     }
 
@@ -913,7 +895,7 @@ function renderList() {
     const dot = document.createElement("div"); dot.className = "dot"; dot.style.background = colorOf(b.who);
     const wrap = document.createElement("div"); wrap.className = "grow";
     const who = document.createElement("div"); who.className = "who"; who.textContent = b.who;
-    if (b.neighbour) { const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = t("neighbour_tag"); who.appendChild(tag); }
+    if (b.neighbour) { const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = b.neighbourName ? "🏠 " + b.neighbourName : t("neighbour_tag"); who.appendChild(tag); }
     const when = document.createElement("div"); when.className = "when";
     when.textContent = rangeFmt(b.start, b.end) + " · " + unit(nights(b.start, b.end), "night", "nights") + " · " + unit(ppl(b), "person", "people");
     wrap.appendChild(who); wrap.appendChild(when);

@@ -1,4 +1,5 @@
 .claude/
 *.zip
+!summer-house.zip
 ._*
 .DS_Store
